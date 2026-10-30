@@ -3,7 +3,7 @@ from discord import app_commands
 import requests
 
 TOKEN = "token"
-ID_SERVIDOR = id
+ID_SERVIDOR = id servidor
 
 bot = discord.Client(intents=discord.Intents.default())
 comandos = app_commands.CommandTree(bot)
@@ -14,7 +14,6 @@ async def clima(interaction: discord.Interaction, cidade: str):
     await interaction.response.defer()
 
     try:
-        # Encontrar a cidade
         r = requests.get(
             "https://geocoding-api.open-meteo.com/v1/search",
             params={"name": cidade, "count": 1, "language": "pt"},
@@ -29,12 +28,12 @@ async def clima(interaction: discord.Interaction, cidade: str):
 
         local = locais[0]
 
-        # Consultar o clima
         r = requests.get(
             "https://api.open-meteo.com/v1/forecast",
             params={
                 "latitude": local["latitude"],
                 "longitude": local["longitude"],
+                "current": "temperature_2m,weather_code",
                 "timezone": "auto"
             },
             timeout=10
@@ -65,10 +64,23 @@ async def clima(interaction: discord.Interaction, cidade: str):
 
         tempo = condicoes.get(dados["weather_code"], "Condição variável 🌥️")
 
+        if dados["weather_code"] == [95, 96, 99]:
+            dica = "⚠️ Tempestade detectada! Procure abrigo em um local fechado e seguro."
+
+        elif dados["weather_code"] == [65, 82]:
+            dica = "⚠️ Chuva muito forte! Evite sair de casa e procure um local seguro."
+
+        elif dados["weather_code"] == [45, 48]:
+            dica = "⚠️ Neblina! Reduza a velocidade se estiver dirigindo."
+
+        else:
+            dica = "✅ Nenhuma condição perigosa identificada."
+
         await interaction.followup.send(
-            f"🌦️ **Climatect — {local['name']}**\n"
+            f"🌦️ **Climatect — {local['name']}**\n\n"
             f"🌡️ Temperatura: {dados['temperature_2m']} °C\n"
-            f"🌤️ Condição: {tempo}"
+            f"🌤️ Condição: {tempo}\n\n"
+            f"🛡️ **Recomendação:** {dica}"
         )
 
     except requests.RequestException:
